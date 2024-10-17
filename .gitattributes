@@ -1,0 +1,2 @@
+*.RData filter=lfs diff=lfs merge=lfs -text
+data/liver_cancer.csv filter=lfs diff=lfs merge=lfs -text
