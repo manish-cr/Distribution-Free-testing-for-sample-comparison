@@ -1,4 +1,5 @@
 library(multicross)
+library(FRmatch)
 # Simulation Example when the user wants to test whether K=3 multivariate distributions are equal:
 X1 = MASS::mvrnorm(10,rep(0,4),diag(2,4),tol=1e-6, empirical=FALSE, EISPACK=FALSE)
 X2 = MASS::mvrnorm(10,rep(0,4),diag(1,4),tol=1e-6, empirical=FALSE, EISPACK=FALSE)
@@ -57,11 +58,10 @@ females <- matrix(c(98, 81, 38,
                     159, 118, 63,
                     162, 124, 61,
                     177, 132, 67), ncol=3, byrow=TRUE)
-# generalizing
-library(multicross)
-
 # Assuming the males and females matrices are being used to represent two distributions
 mcm(list(males, females), 0.05)
 
 # MMCM test
 mmcm(list(males, females), 0.05)
+
+p_val <- FRtest(males, females)[[5]]
