@@ -58,19 +58,15 @@ X2 = MASS::mvrnorm(10,rep(0,4),diag(1,4),tol=1e-6, empirical=FALSE, EISPACK=FALS
 data_list_1 <- list(males, females)
 data_list_2 <- list(X1, X2)
 
-# Function to calculate cosine similarity matrix
-cosine_similarity <- function(X) {
-  X_norm <- X / sqrt(rowSums(X^2))
-  return(X_norm %*% t(X_norm))
-}
-
-# Function to calculate MST using cosine similarity
+# Function to calculate MST
 calculate_mst <- function(X) {
-  sim_matrix <- cosine_similarity(X)
-  # Convert similarity to distance for MST construction
-  dist_matrix <- 1 - sim_matrix
+  # Compute Euclidean distance matrix
+  dist_matrix <- dist(X, method = "euclidean")
+  dist_matrix <- as.matrix(dist_matrix)
   # Create a graph object from distance matrix, mode='lower' for undirected graph
-  g <- graph_from_adjacency_matrix(dist_matrix)
+  g <- graph_from_adjacency_matrix(dist_matrix, mode = "undirected", weighted = TRUE, diag = FALSE)
+  # Set vertex names as row indices to avoid automatic renaming
+  V(g)$name <- as.character(1:nrow(X))
   # Compute MST
   mst <- mst(g, weights = E(g)$weight)
   return(mst)
@@ -82,8 +78,11 @@ calculate_R_values <- function(mst, group_labels) {
   R0 <- 0; R1 <- 0; R2 <- 0
   
   for (edge in 1:nrow(edges)) {
-    i <- edges[edge, 1]
-    j <- edges[edge, 2]
+    i <- as.numeric(edges[edge, 1])
+    j <- as.numeric(edges[edge, 2])
+    # if(is.na(group_labels[i]) || is.na(group_labels[j])){
+    #   next # skip
+    # }
     if (group_labels[i] != group_labels[j]) {
       R0 <- R0 + 1
     } else if (group_labels[i] == 0) {
@@ -111,21 +110,6 @@ calculate_test_statistic <- function(R1, R2, mu1, mu2, cov_matrix, reg_lambda = 
   
   return(as.numeric(S))  # Return S as a scalar
 }
-
-# Calculate the MST on combined data
-mst <- calculate_mst(combined_data)
-
-# Get original R values
-R_values <- calculate_R_values(mst, group_labels)
-R1 <- R_values$R1
-R2 <- R_values$R2
-
-# Get the means (INCORRECT because R1 and R2 are just numbers here(must be done at permutation step))
-mu1 <- mean(R1)
-mu2 <- mean(R2)
-
-# Estimate covariance matrix (this won't change during permutation)
-cov_matrix <- calculate_covariance(R1_list = R1, R2_list = R2)
 
 # Permutation testing function
 chen_friedman <- function(data_list, num_permutations=1000) {
@@ -176,10 +160,10 @@ chen_friedman <- function(data_list, num_permutations=1000) {
 # 
 # # Print the p-value
 # print(paste("P-value:", p_value))
-# 
-# ############### non-rejection test
-# # Combine X1 and X2
-# 
+# # 
+############### non-rejection test
+# Combine X1 and X2
+
 # # Perform the permutation test
 # p_value <- chen_friedman(data_list_2)
 # 
