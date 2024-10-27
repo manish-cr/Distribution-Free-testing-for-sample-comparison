@@ -4,16 +4,16 @@ set.seed(2)
 signal <- c(1:10)
 
 # suppose that there are 100 observations
-X1_signal <- MASS::mvrnorm(100,rep(1,10), diag(1,10))
-X1_false_10_feat <- MASS::mvrnorm(100,rep(0,10), diag(1,10))
-X1_false_20_feat <- MASS::mvrnorm(100,rep(0,20), diag(1,20))
-X1_false_30_feat <- MASS::mvrnorm(100,rep(0,30), diag(1,30))
+X1_signal <- MASS::mvrnorm(350,rep(1,10), diag(1,10))
+X1_false_10_feat <- MASS::mvrnorm(350,rep(0,10), diag(1,10))
+X1_false_20_feat <- MASS::mvrnorm(350,rep(0,20), diag(1,20))
+X1_false_30_feat <- MASS::mvrnorm(350,rep(0,30), diag(1,30))
 
 
-X2_signal <- MASS::mvrnorm(100,rep(5,10), diag(1,10))
-X2_false_10_feat <- MASS::mvrnorm(100,rep(0,10), diag(1,10))
-X2_false_20_feat <- MASS::mvrnorm(100,rep(0,20), diag(1,20))
-X2_false_30_feat <- MASS::mvrnorm(100,rep(0,30), diag(1,30))
+X2_signal <- MASS::mvrnorm(350,rep(5,10), diag(1,10))
+X2_false_10_feat <- MASS::mvrnorm(350,rep(0,10), diag(1,10))
+X2_false_20_feat <- MASS::mvrnorm(350,rep(0,20), diag(1,20))
+X2_false_30_feat <- MASS::mvrnorm(350,rep(0,30), diag(1,30))
 
 # doing the merge here
 X1_dim_20 <- cbind(X1_signal, X1_false_10_feat)
@@ -26,10 +26,32 @@ X2_dim_40 <- cbind(X2_signal, X2_false_30_feat)
 
 # simulation to find fwer and fdr
 source('test_gfs.R')
-data_list <- list(X1_dim_20, X2_dim_20)
-features <- c(1:ncol(X1_dim_20))
+data_list <- list(X1_dim_30, X2_dim_30)
+features <- c(1:ncol(X1_dim_30))
 alpha_thresh = .05
 selected_features <- GFS(features, alpha_thresh, data_list, test_type = "MCM")
+#==================================================
+
+# Parallelization test
+library(parallel)
+
+# Set up the constants
+set.seed(2)
+data_list <- list(X1_dim_20, X2_dim_20)  # List of matrices for two classes
+features <- c(1:ncol(X1_dim_20))         # Feature indices
+alpha_thresh <- 0.05
+
+# Wrapper function to call GFS
+gfs_wrapper <- function(feature_set) {
+  GFS(features = feature_set, alpha_thresh = alpha_thresh, data_list = data_list, test_type = "MMCM")
+}
+
+# Parallel feature selection using mclapply
+selected_features_list <- mclapply(list(features), gfs_wrapper, mc.cores = detectCores() - 3)
+
+# View the selected features
+print(selected_features_list)
+
 
 #==================================================
 # Simulation approach (NEEDS CHECKING)

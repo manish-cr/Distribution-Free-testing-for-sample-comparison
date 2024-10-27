@@ -54,6 +54,7 @@ importance(rf_model_boruta)
 HCC_indices <- which(df$type=="HCC")
 normal_indices <- which(train$type == "normal")
 
+# PROBLEM WITH MCM
 # Extract the features (excluding samples and type)
 data_matrix_HCC <- as.matrix(train[HCC_indices, -(1:2)])  # Exclude the first two columns (type and samples)
 data_matrix_normal <- as.matrix(train[normal_indices, -(1:2)])
@@ -63,40 +64,47 @@ data_list <- list(data_matrix_HCC,
                   data_matrix_normal)
 
 # Feature set: All gene indices
-features <- 1:(ncol(train) - 2)  # Exclude samples and type columns
+features <- 1:(ncol(train)-2)  # Exclude samples and type columns
 
-# Apply GFS with "MCM"
+# Apply GFS
 alpha_thresh <- 0.05
-selected_features_mcm <- GFS(features, alpha_thresh, data_list, test_type = "MCM")
-selected_features_mmcm <- GFS(features, alpha_thresh, data_list, test_type = "MMCM")
-selected_features_cf <- GFS(features, alpha_thresh, data_list, test_type = "CF")
+# selected_features_mcm <- GFS(features, alpha_thresh, data_list, test_type = "MCM")
+# selected_features_mmcm <- GFS(features, alpha_thresh, data_list, test_type = "MMCM")
 
-# --------------parallelization test (FR)--------------------------------------------
-# library(foreach)
-# library(doParallel)
-# 
-# # Register the parallel backend
-# num_cores <- detectCores() - 3  # Adjust the number of cores as needed
-# cl <- makeCluster(num_cores)
-# registerDoParallel(cl)
-# 
-# # Define a function to process chunks of features
-# process_chunk <- function(chunk_features, data_list, alpha_thresh, test_type) {
-#   # Run GFS on the chunk of features
-#   GFS(chunk_features, alpha_thresh, data_list, test_type)
-# }
-# 
-# # Split features into chunks for parallel processing (e.g., 1000 features per chunk)
-# chunk_size <- 1000  # Adjust the chunk size as needed
-# feature_chunks <- split(features, ceiling(seq_along(features) / chunk_size))
-# 
-# # Use foreach to process feature chunks in parallel
-# selected_features_list <- foreach(chunk = feature_chunks, .combine = c, .packages = c("multicross", "FRmatch")) %dopar% {
-#   process_chunk(chunk, data_list, alpha_thresh, test_type = "FR")
-# }
-# 
-# # Stop the cluster after processing
-# stopCluster(cl)
-# 
-# # Print the final selected features from all chunks
-# print(selected_features_list)
+
+# --------------parallelization test--------------------------------------------
+
+# Parallelization test
+library(parallel)
+
+# Wrapper function to call GFS
+gfs_wrapper <- function(feature_set) {
+  GFS(features = feature_set, alpha_thresh = alpha_thresh, data_list = data_list, test_type = "MMCM")
+}
+
+# Parallel feature selection using mclapply
+selected_features_list <- mclapply(list(features), gfs_wrapper, mc.cores = detectCores() - 1)
+
+# View the selected features
+print(selected_features_list)
+
+#########################################################
+# validation error check (MMCM)
+# Convert numeric indices to column names for both train and test data
+corrected_features <- selected_features_list[[1]] + 2 # (to adjust for the type and samples)
+selected_feature_names <- c("type", colnames(train)[corrected_features])
+
+# Subset train and test datasets using the selected feature names
+train_mmcm <- train[, selected_feature_names, drop = FALSE]
+test_mmcm <- test[, selected_feature_names, drop = FALSE]
+
+# Train the Random Forest model on the selected features
+rf_model_mmcm <- randomForest(type ~ ., data = train_mmcm, ntree = 500, mtry = sqrt(ncol(train_mmcm) - 1), importance = TRUE)
+
+rf_predicted_classes_mmcm <- predict(rf_model_mmcm, newdata = test_mmcm)
+
+actual_classes_mmcm <- test_mmcm$type  # True labels in the test set
+rf_test_error_mmcm <- mean(rf_predicted_classes_mmcm != actual_classes_mmcm)  # Misclassification error rate
+
+# Print the Random Forest test error
+print(paste("Random Forest Test error:", rf_test_error_mmcm))

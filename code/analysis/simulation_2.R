@@ -1,107 +1,104 @@
-getwd()
-library(tidyverse)
-df <- read_csv("/home/manish/Documents/NUS stuff/y4s1/DSA4288S/data/liver_cancer.csv")
-View(df)
-boxplot(df['type'])
-df['type']
-table(df['type'])
-install.packages("corrr")
-library('corrr')
-install.packages("ggcorrplot")
-library(ggcorrplot)
-install.packages("FactoMineR")
-library("FactoMineR")
-install.packages('car', 'pbkrtest','quantreg','lme4')
-install.packages('car')
-install.packages("MatrixModels")
-install.packages("nloptr")
-install.packages("pbkrtest")
-install.packages("pbkrtest")
 source("analysis.R")
+
 # Load required libraries
 library(parallel)
+
 # Define parameters
 alpha_thresh <- 0.05
 num_replicates <- 100
 signal_features <- final.boruta  # Important features identified by Boruta
 min_dim <- length(signal_features)+5  # Start with the number of signal features (60)
 max_dim <- 100  # Adjust as needed to define the max dimension
+
 # Function to add false features by bootstrapping from the train dataset with replacement
 generate_false_features <- function(train_data, num_false_features) {
-# Sample rows and columns with replacement to create false features
-sampled_data <- train_data[sample(1:nrow(train_data), size = nrow(train_data), replace = TRUE), ]
-sampled_data[, sample(3:ncol(train_data), num_false_features, replace = TRUE)]
+  # Sample rows and columns with replacement to create false features
+  sampled_data <- train_data[sample(1:nrow(train_data), size = nrow(train_data), replace = TRUE), ]
+  sampled_data[, sample(3:ncol(train_data), num_false_features, replace = TRUE)]
 }
+
 # Wrapper function for GFS execution with MMCM test
 gfs_wrapper <- function(data_combined, alpha_thresh) {
-GFS(features = 1:ncol(data_combined), alpha_thresh = alpha_thresh,
-data_list = list(data_combined[HCC_indices, ], data_combined[normal_indices, ]),
-test_type = "MMCM")
+  GFS(features = 1:ncol(data_combined), alpha_thresh = alpha_thresh, 
+      data_list = list(data_combined[HCC_indices, ], data_combined[normal_indices, ]), 
+      test_type = "MMCM")
 }
+
 # # Main simulation loop with bootstrapping for false feature generation
 # results <- list()
 # for (dim in seq(min_dim, max_dim, by = 10)) {
 #   replicate_results <- replicate(num_replicates, {
 #     # Calculate the number of false features to add
 #     num_false_features <- dim - length(signal_features)
-#
+#     
 #     # Add false features by bootstrapping from the training data
 #     false_features <- generate_false_features(train, num_false_features)
-#
+#     
 #     # Combine signal and false features
 #     data_combined <- cbind(train[, signal_features, drop = FALSE], false_features)
-#
+#     
 #     # Apply GFS for MMCM with the combined data
 #     selected_features <- gfs_wrapper(data_combined, alpha_thresh)
-#
+#     
 #     # Calculate FDR, FWER, and power
 #     # False Discovery Rate (FDR)
 #     fdr <- sum(!selected_features %in% signal_features) / max(1, length(selected_features))
-#
+#     
 #     # Family-Wise Error Rate (FWER): Probability of selecting any false positives
 #     fwer <- as.numeric(any(!selected_features %in% signal_features))
-#
+#     
 #     # Power: Probability that all true signals are selected
 #     power <- as.numeric(all(signal_features %in% selected_features))
-#
+#     
 #     c(FDR = fdr, FWER = fwer, Power = power)
 #   }, simplify = TRUE)
-#
+#   
 #   results[[paste0("Dim_", dim)]] <- replicate_results
 # }
-#
+# 
 # # Average the results across replicates for each dimension
 # summary_results <- lapply(results, rowMeans)
 # summary_results
+
 # Parallelizing
 results <- list()
 # Function to perform the simulation for a single dimension
 simulate_dimension <- function(dim) {
-replicate_results <- replicate(num_replicates, {
-# Calculate the number of false features to add
-num_false_features <- dim - length(signal_features)
-# Add false features by bootstrapping from the training data
-false_features <- generate_false_features(train, num_false_features)
-# Combine signal and false features
-data_combined <- cbind(train[, signal_features, drop = FALSE], false_features)
-# Apply GFS for MMCM with the combined data
-selected_features <- gfs_wrapper(data_combined, alpha_thresh)
-selected_feature_names <- colnames(data_combined)[selected_features]
-# Calculate FDR, FWER, and power based on the definitions provided
-# False Discovery Rate (FDR)
-fdr <- sum(!selected_feature_names %in% signal_features) / max(1, length(selected_feature_names))
-# Family-Wise Error Rate (FWER): Probability of selecting any false positives
-fwer <- as.numeric(any(!selected_feature_names %in% signal_features))
-# Power: Probability that all true signals are selected
-power <- as.numeric(all(selected_feature_names %in% selected_features))
-c(FDR = fdr, FWER = fwer, Power = power)
-}, simplify = TRUE)
-# Return average results for this dimension
-rowMeans(replicate_results)
+  replicate_results <- replicate(num_replicates, {
+    # Calculate the number of false features to add
+    num_false_features <- dim - length(signal_features)
+    
+    # Add false features by bootstrapping from the training data
+    false_features <- generate_false_features(train, num_false_features)
+    
+    # Combine signal and false features
+    data_combined <- cbind(train[, signal_features, drop = FALSE], false_features)
+    
+    # Apply GFS for MMCM with the combined data
+    selected_features <- gfs_wrapper(data_combined, alpha_thresh)
+    selected_feature_names <- colnames(data_combined)[selected_features]
+    
+    # Calculate FDR, FWER, and power based on the definitions provided
+    # False Discovery Rate (FDR)
+    fdr <- sum(!selected_feature_names %in% signal_features) / max(1, length(selected_feature_names))
+    
+    # Family-Wise Error Rate (FWER): Probability of selecting any false positives
+    fwer <- as.numeric(any(!selected_feature_names %in% signal_features))
+    
+    # Power: Probability that all true signals are selected
+    power <- as.numeric(all(selected_feature_names %in% selected_features))
+    
+    c(FDR = fdr, FWER = fwer, Power = power)
+  }, simplify = TRUE)
+  
+  # Return average results for this dimension
+  rowMeans(replicate_results)
 }
+
 # Parallelized loop over dimensions
 dimensions <- seq(min_dim, max_dim, by = 10)
 results <- mclapply(dimensions, simulate_dimension, mc.cores = detectCores() - 4)
+
 # Convert results to a readable format
 names(results) <- paste0("Dim_", dimensions)
 results
