@@ -1,3 +1,4 @@
+setwd("/home/manish/Documents/NUS stuff/y4s1/DSA4288S-Mult/code/analysis")
 source("analysis.R")
 
 # Load required libraries
@@ -97,7 +98,7 @@ simulate_dimension <- function(dim) {
 
 # Parallelized loop over dimensions
 dimensions <- seq(min_dim, max_dim, by = 10)
-results <- mclapply(dimensions, simulate_dimension, mc.cores = detectCores() - 4)
+results <- mclapply(dimensions, simulate_dimension, mc.cores = detectCores() - 5)
 
 # Convert results to a readable format
 names(results) <- paste0("Dim_", dimensions)

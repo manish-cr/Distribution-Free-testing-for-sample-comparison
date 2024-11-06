@@ -14,5 +14,17 @@ test_fn <- function(test_type, data_list, level = 0.05) {
   } else if (test_type == "CF"){
     p_val <- as.numeric(chen_friedman(data_list))
     return(p_val)
+  } else if (test_type == "FR"){
+    x1 <- data_list[[1]]
+    x2 <- data_list[[2]]
+    l1 <- nrow(x1)
+    l2 <- nrow(x2)
+    lmin <- min(l1, l2)
+    if(l1<=l2){
+      x2 <- x2[1:lmin,]
+    } else{
+      x1 <- x1[1:lmin,]
+    }
+    p_val <- FRtest(x1, x2)
   }
 }

@@ -1,5 +1,7 @@
 # Load required library for distance calculation
 library(igraph)
+library(multicross)
+library(FRmatch)
 
 # Data: Males and Females matrices
 males <- matrix(c(93, 74, 37,
@@ -51,6 +53,13 @@ females <- matrix(c(98, 81, 38,
                     159, 118, 63,
                     162, 124, 61,
                     177, 132, 67), ncol=3, byrow=TRUE)
+
+# MCM and MMCM test
+data_list <- list(males, females)
+p_val_mcm <- mcm(data_list, level = .05)
+p_val_mmcm <- mmcm(data_list,level = .05)
+p_val_fr <- FRtest(males, females)[[5]]
+
 
 # Another data test to check for non-rejection of H_0
 X1 = MASS::mvrnorm(10,rep(0,4),diag(2,4),tol=1e-6, empirical=FALSE, EISPACK=FALSE)
