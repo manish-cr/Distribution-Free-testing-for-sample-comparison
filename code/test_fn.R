@@ -25,6 +25,7 @@ test_fn <- function(test_type, data_list, level = 0.05) {
     } else{
       x1 <- x1[1:lmin,]
     }
-    p_val <- FRtest(x1, x2)
+    p_val <- as.numeric(FRtest(t(x1), t(x2))[[5]])
+    return(p_val)
   }
 }

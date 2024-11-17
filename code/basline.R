@@ -1,10 +1,12 @@
 library(multicross)
 library(FRmatch)
+set.seed(1)
 # Simulation Example when the user wants to test whether K=3 multivariate distributions are equal:
-X1 = MASS::mvrnorm(10,rep(0,4),diag(2,4),tol=1e-6, empirical=FALSE, EISPACK=FALSE)
-X2 = MASS::mvrnorm(10,rep(0,4),diag(1,4),tol=1e-6, empirical=FALSE, EISPACK=FALSE)
+X1 = MASS::mvrnorm(100,rep(1,4),diag(2,4),tol=1e-6, empirical=FALSE, EISPACK=FALSE)
+X2 = MASS::mvrnorm(100,rep(0,4),diag(1,4),tol=1e-6, empirical=FALSE, EISPACK=FALSE)
 X3 = MASS::mvrnorm(10,rep(0,4),diag(3,4),tol=1e-6, empirical=FALSE, EISPACK=FALSE)
-mcm(list(X1,X2,X3),0.05)
+mcm(list(X1,X2,X3),0.05)[[1]]
+FRtest(t(X1),t(X2))
 
 # using the painted turtles (baseline example)
 # MCM test
@@ -64,4 +66,4 @@ mcm(list(males, females), 0.05)
 # MMCM test
 mmcm(list(males, females), 0.05)
 
-p_val <- FRtest(males, females)[[5]]
+p_val <- FRtest(t(males), t(females))[[5]]
